@@ -1014,13 +1014,75 @@ function stopGeneration() {
   }
 }
 
-function regenerate(btn) {
+async function regenerate(btn) {
   if (isLoading) return;
-  // Remove the last AI message
+
+  // Remove last AI message from screen
   const msgEl = btn.closest('.msg');
   if (msgEl) msgEl.remove();
-  // Re-send last user message
-  sendMessage(lastUserMsg);
+
+  // Call /regenerate which deletes last AI msg from DB then streams fresh
+  if (!lastUserMsg) return;
+  setLoading(true);
+  addTyping();
+  abortController = new AbortController();
+
+  try {
+    const res = await fetch(`${API}/regenerate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: lastUserMsg, session_id: sessionId }),
+      signal: abortController.signal
+    });
+
+    removeTyping();
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Server error' }));
+      const d = createAiMsgEl();
+      finalizeAiMsg(d, `⚠️ ${err.error || 'Server error'}`, true);
+      setLoading(false);
+      return;
+    }
+
+    const msgElNew = createAiMsgEl();
+    const bubble = msgElNew.querySelector('#stream-bubble');
+    let fullText = '';
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (!raw) continue;
+        try {
+          const payload = JSON.parse(raw);
+          if (payload.token) {
+            fullText += payload.token;
+            bubble.innerHTML = safeParse(fullText) + '<span class="stream-cursor-inline">▊</span>';
+            scrollDown();
+          }
+          if (payload.error) { finalizeAiMsg(msgElNew, `⚠️ ${payload.error}`, true); break; }
+          if (payload.done)  { finalizeAiMsg(msgElNew, fullText); break; }
+        } catch {}
+      }
+    }
+  } catch (err) {
+    removeTyping();
+    if (err.name !== 'AbortError') {
+      const d = createAiMsgEl();
+      finalizeAiMsg(d, '⚠️ Cannot connect to server.', true);
+    }
+  }
+
+  setLoading(false);
+  abortController = null;
 }
 
 function sendSugg(text) {
