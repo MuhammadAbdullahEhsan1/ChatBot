@@ -610,7 +610,7 @@ html, body {
     <div class="topbar">
       <div class="model-pill">
         <div class="status-dot" id="status-dot"></div>
-        <span id="chat-title-display">Gemini 2.5 Flash</span>
+        <span id="chat-title-display">Thinking</span>
       </div>
       <div class="topbar-actions">
         <button class="topbar-btn" onclick="startNewChat()">+ New chat</button>
@@ -1124,7 +1124,7 @@ async function switchSession(sid, title) {
     i.classList.toggle('active', i.dataset.sid === sid);
   });
 
-  document.getElementById('chat-title-display').textContent = title || 'Gemini 2.5 Flash';
+  document.getElementById('chat-title-display').textContent = title || 'Thinking';
 
   // Load messages
   try {
@@ -1175,7 +1175,7 @@ async function deleteSession(e, sid) {
 
 function startNewChat() {
   sessionId = 'session_' + Date.now();
-  document.getElementById('chat-title-display').textContent = 'Gemini 2.5 Flash';
+  document.getElementById('chat-title-display').textContent = 'Thinking';
   const container = document.getElementById('msgs');
   container.innerHTML = `
     <div class="welcome" id="welcome">
