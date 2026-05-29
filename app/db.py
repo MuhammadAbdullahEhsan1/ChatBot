@@ -5,12 +5,12 @@ from datetime import datetime
 # Thread-safe connection per thread
 _local = threading.local()
 
-DB_PATH = "chatbot.db"
+DB_PATH = "/tmp/chat.db"
 
 
 def get_conn():
     if not hasattr(_local, "conn"):
-        _local.conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        _local.conn = sqlite3.connect("/tmp/chat.db", check_same_thread=False)
         _local.conn.row_factory = sqlite3.Row
         _local.conn.execute("PRAGMA journal_mode=WAL")
         _local.conn.execute("PRAGMA synchronous=NORMAL")
