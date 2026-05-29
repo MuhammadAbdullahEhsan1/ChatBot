@@ -24,7 +24,9 @@ from app.db import (
 # ── App ───────────────────────────────────────────────────────────────────────
 
 app = FastAPI(title="Abdullah AI Chat", version="2.0.0")
+
 load_dotenv()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,6 +34,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Gemini ────────────────────────────────────────────────────────────────────
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY)
@@ -356,6 +359,24 @@ async def chat(request: Request, body: ChatRequest):
         content={"error": f"AI service unavailable: {last_error}"}
     )
 
+# ── Regenerate  ────────────────────────────────────────────────────────
+@app.post("/regenerate")
+async def regenerate_endpoint(request: Request, body: ChatRequest):
+    check_rate_limit(request.client.host)
+    sid = body.session_id
+
+    # Delete the last AI message from DB
+    conn = __import__('app.db', fromlist=['get_conn']).get_conn()
+    last_ai = conn.execute(
+        "SELECT id FROM chat_history WHERE session_id=? AND role='model' ORDER BY id DESC LIMIT 1",
+        (sid,)
+    ).fetchone()
+    if last_ai:
+        conn.execute("DELETE FROM chat_history WHERE id=?", (last_ai["id"],))
+        conn.commit()
+
+    # Now stream fresh response
+    return await chat_stream(request, body)
 
 # ── Session management ────────────────────────────────────────────────────────
 
