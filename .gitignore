@@ -1,0 +1,10 @@
+.env
+venv/
+__pycache__/
+*.pyc
+
+chatbot.db
+chatbot.db-shm
+chatbot.db-wal
+
+.DS_Store
